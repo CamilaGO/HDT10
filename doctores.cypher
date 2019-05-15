@@ -71,7 +71,22 @@ CREATE
 	(pANDY)-[:VISITS {fecha: "13052019"}]-> (dEMI)-[:PRESCRIBE]-> (mVD) <-[:TAKES]-(pANDY),
 	(pMARCO)-[:VISITS {fecha: "12012012"}]-> (dALE)-[:PRESCRIBE]-> (mBUD) <-[:TAKES]-(pMARCO),
 	(pROB)-[:VISITS {fecha: "04042019"}]-> (dFER)-[:PRESCRIBE]-> (mHIE) <-[:TAKES]-(pROB),
-	(pDIEG)-[:VISITS {fecha: "16102018"}]-> (dVAL)-[:PRESCRIBE]-> (mDI) <-[:TAKES]-(pDIEG);
+	(pDIEG)-[:VISITS {fecha: "16102018"}]-> (dVAL)-[:PRESCRIBE]-> (mDI) <-[:TAKES]-(pDIEG),
+//
+	(pWILLI)-[:KNOWS]-> (pABRIL),
+	(pABRIL)-[:KNOWS]-> (pDIANA),
+	(pDIANA)-[:KNOWS]-> (pCRIS),
+	(pCRIS)-[:KNOWS]-> (pLUCA),
+	(pLUCA)-[:KNOWS]-> (pCAMI),
+	(pCAMI)-[:KNOWS]-> (pINES),
+	(pMARCO)-[:KNOWS]-> (pANDY),
+	(pANDY)-[:KNOWS]-> (pABRIL),
+	(pWILLI)-[:KNOWS]-> (pINES),
+	(pANDY)-[:KNOWS]-> (pLUCA),
+	(pANDY)-[:KNOWS]-> (pCRIS);
+
+
+
 
 MATCH (n) RETURN n;
 
