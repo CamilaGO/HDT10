@@ -14,6 +14,12 @@ def knows_pacient(tx, nombre, conocido_nombre):
            "MATCH (b:Paciente) WHERE b.nombre = $conocido_nombre "
            "MERGE (a) -[:KNOWS]-> (b)",
            nombre=nombre, conocido_nombre=conocido_nombre)
+
+def knows_doctor(tx, nombre, conocido_nombre):
+    tx.run("MATCH (a:Doctor) WHERE a.nombre = $nombre "
+           "MATCH (b:Doctor) WHERE b.nombre = $conocido_nombre "
+           "MERGE (a) -[:KNOWS]-> (b)",
+           nombre=nombre, conocido_nombre=conocido_nombre)
     
 def return_docs (tx, name):
     for record in tx.run ("MATCH (d:Doctor) WHERE d.especialidad = $name RETURN d.nombre",
@@ -33,7 +39,6 @@ def mergePacMedDoc(tx, nombre, telefono, nombred, desdeFecha, hastaFecha, dosis,
            "MERGE (p) -[:VISITS]-> (d)"
            "MERGE (p) -[:TAKES]-> (m) <-[:PRESCRIBE]- (d)",
            nombre=nombre, telefono=telefono, nombred=nombred, desdeFecha=desdeFecha, hastaFecha=hastaFecha, dosis=dosis, nombreDoc=nombreDoc)
-    
 
 
 #opcion=input("Escoja 1 de las siguientes opciones")
