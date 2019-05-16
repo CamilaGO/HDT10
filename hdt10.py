@@ -2,6 +2,12 @@ from neo4j import GraphDatabase
 
 driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "soyUVG17"))
 
+#Verfica que un doctor exista
+def ver_doc(tx, nombredoc):
+    tx.run("MATCH (d:Doctor) WHERE d.nombre = $nombredoc "
+           "RETURN d",
+           nombredoc=nombredoc)
+    
 #Agrega un paciente con toda su info 
 def add_pac(tx, nombre, telefono):
     tx.run("CREATE (d:Paciente {nombre: $nombre, telefono: $telefono})",
@@ -94,6 +100,10 @@ with driver.session() as session:
             nombre=input("Nombre doctor\n")
             nombre2=input("Nombre de conocido\n")
             session.write_transaction(knows_doctor, nombre, nombre2)
+        elif(elec==8):
+            nombreDoc = input("Ingrese nombre del doctor\n")
+            comp = session.write_transaction(ver_doc, nombreDoc)
+            print(comp)
     if(elec==7):
         print("Hasta luego!")
        # elif (elec=="5"):
