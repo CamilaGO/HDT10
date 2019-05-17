@@ -1,6 +1,6 @@
 from neo4j import GraphDatabase
 
-driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "soyUVG17"))
+driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "netsa"))
 
 #Agrega a la lista cada paciente que encuentre con ese nombre
 def verificarDoc(nombre):
@@ -45,7 +45,8 @@ def knows_pacient(tx, nombre, conocido_nombre):
 def knows_doctor(tx, nombre, conocido_nombre):
     tx.run("MATCH (a:Doctor) WHERE a.nombre = $nombre "
            "MATCH (b:Doctor) WHERE b.nombre = $conocido_nombre "
-           "MERGE (a) -[:KNOWS]-> (b)",
+           "MERGE (a) -[:KNOWS]-> (b)"
+           "MERGE (b) -[:KNOWS]-> (a)",
            nombre=nombre, conocido_nombre=conocido_nombre)
     
 #Muestra todos los doctores segun la especialidad ingresada 
@@ -79,11 +80,23 @@ def validarNumero(variable):
     except ValueError:
         return False
 
+def encontrarDOC(tx, nombre, especialidad):
+    for doc in tx.run("MATCH (p:Paciente {nombre:$nombre})-[:KNOWS]->(:Paciente)-[:VISITS]->(d:Doctor {especialidad:$especialidad}) RETURN d.nombre",
+           nombre=nombre, especialidad=especialidad):
+            print (doc["d.nombre"])
+
+def FindDocWithDoc(tx, nombre, especialidad):
+     for doc in tx.run("MATCH (d:Doctor {nombre:$nombre})-[:KNOWS]->(x:Doctor {especialidad:$especialidad}) RETURN x.nombre",
+           nombre=nombre, especialidad=especialidad):
+            print (doc["x.nombre"])
+
+    
+
 
 with driver.session() as session:
     elec=0;
     print("------BIENVENIDO AL RECOMENDADOR DE DOCTORES------")
-    while (elec!=7):
+    while (elec!=9):
         print("\n\nIngrese opcion que desea realizar\n")
         print("1. Agregar doctor\n")
         print("2. Agregar paciente\n")
@@ -91,9 +104,11 @@ with driver.session() as session:
         print("4. Consultar doctores por especialidad\n")
         print("5. Ingresar amistad paciente-paciente\n")
         print("6. Ingresar amistad doctor-doctor\n")
-        print("7. Salir\n")
+        print("7. Consultar doctor visitado por oaciente conocido\n")
+        print("8. Consultar doctor conocido de doctor\n")
+        print("9. Salir\n")
         elec=input("")
-        if ((validarNumero(elec)==False)or (int(elec)==0)or (int(elec)>7)):
+        if ((validarNumero(elec)==False)or (int(elec)==0)or (int(elec)>9)):
             print("¡¡¡¡¡Ingresaste una opcion incorrecta!!!!\n")
         else:
             elec = int(elec)
@@ -149,9 +164,27 @@ with driver.session() as session:
                     session.write_transaction(knows_doctor, nombre, nombre2)
                     print("\n>>> Se ha creado exitosamente la conexion entre " + nombre + " y " + nombre2)
                 else:
-                    print("\n>>> Alguno de los doctores no existe en la DB")       
+                    print("\n>>> Alguno de los doctores no existe en la DB")
+            elif (elec==7):
+                print("\n-_-_-_-_-_-_Doctor visitado por paciente conocido-_-_-_-_-_-_\n")
+                nombre=input("Nombre del paciente: ")
+                espec=input("Especialidad interes: ")
+                #Se verifica que el paciente exista
+                if((len(verificarPac(nombre)))>=1):
+                    session.read_transaction(encontrarDOC, nombre, espec)
+                else:
+                    print("\n>>> El paciente llamado " + nombre + " no existe en la DB")
+            elif (elec==8):
+                print("\n-_-_-_-_-_-_Doctor especializado conocido por doctor-_-_-_-_-_-_\n")
+                nombre=input("Nombre del Doctor: ")
+                espec=input("Especialidad interes: ")
+                #Se verifica que el doctor exista
+                if((len(verificarDoc(nombre)))>=1):
+                    session.read_transaction(FindDocWithDoc, nombre, espec)
+                else:
+                    print("\n>>> El doctor llamado " + nombre + " no existe en la DB")
     #Termina el while        
-    if(elec==7):
+    if(elec==9):
         print("Hasta luego!")
           
 
