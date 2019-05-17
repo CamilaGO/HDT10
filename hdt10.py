@@ -2,12 +2,28 @@ from neo4j import GraphDatabase
 
 driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "soyUVG17"))
 
-#Verfica que un doctor exista
-def ver_doc(tx, nombredoc):
-    tx.run("MATCH (d:Doctor) WHERE d.nombre = $nombredoc "
-           "RETURN d",
-           nombredoc=nombredoc)
-    
+#Agrega a la lista cada paciente que encuentre con ese nombre
+def verificarDoc(nombre):
+    lista=[]
+    cql = "MATCH (x:Doctor {nombre: '" + nombre + "'}) RETURN x"
+            # Execute the CQL query
+    with driver.session() as graphDB_Session:
+        nodes = graphDB_Session.run(cql)
+        for node in nodes:
+            lista.append(node)
+        return lista
+
+#Agrega a la lista cada paciente que encuentre con ese nombre
+def verificarPac(nombre):
+    lista=[]
+    cql = "MATCH (x:Paciente {nombre: '" + nombre + "'}) RETURN x"
+            # Execute the CQL query
+    with driver.session() as graphDB_Session:
+        nodes = graphDB_Session.run(cql)
+        for node in nodes:
+            lista.append(node)
+        return lista
+
 #Agrega un paciente con toda su info 
 def add_pac(tx, nombre, telefono):
     tx.run("CREATE (d:Paciente {nombre: $nombre, telefono: $telefono})",
@@ -34,9 +50,12 @@ def knows_doctor(tx, nombre, conocido_nombre):
     
 #Muestra todos los doctores segun la especialidad ingresada 
 def return_docs (tx, name):
+    print("Doctores especializdos en " + name + "\n")
+    cont = 0
     for record in tx.run ("MATCH (d:Doctor) WHERE d.especialidad = $name RETURN d.nombre",
             name=name):
-        print (record["d.nombre"])
+        cont = cont + 1
+        print (str(cont) + ". " + record["d.nombre"])
  
 def mergePacDoc(tx, nombre, telefono, nombred, desdeFecha, hastaFecha, dosis ):
     tx.run("MERGE (p:Paciente {nombre:$nombre, telefono:$telefono})"
@@ -52,79 +71,88 @@ def mergeVisit(tx, nombre, telefono, nombred, desdeFecha, hastaFecha, dosis, nom
            "MERGE (p) -[:VISITS {fecha:$fechaVisita}]-> (d)"
            "MERGE (p) -[:TAKES]-> (m) <-[:PRESCRIBE]- (d)",
            nombre=nombre, telefono=telefono, nombred=nombred, desdeFecha=desdeFecha, hastaFecha=hastaFecha, dosis=dosis, nombreDoc=nombreDoc, fechaVisita=fechaVisita)
+#Verifica que el valor de una variable sea un numero converitble a entero
+def validarNumero(variable): 
+    try:
+        variable = int(variable)
+        return True
+    except ValueError:
+        return False
 
 
-#opcion=input("Escoja 1 de las siguientes opciones")
 with driver.session() as session:
     elec=0;
     print("------BIENVENIDO AL RECOMENDADOR DE DOCTORES------")
     while (elec!=7):
-        print("\nIngrese opcion que desea realizar\n")
-        print("1.Ingresar doctor\n")
-        print("2.Ingresar paciente\n")
-        print("3.Ingresar paciente e informacion de visita\n")
-        print("4.Consultar dosctores por especialidad\n")
-        print("5.Ingresar amistad paciente-paciente\n")
-        print("6.Ingresar amistad doctor-doctor\n")
+        print("\n\nIngrese opcion que desea realizar\n")
+        print("1. Agregar doctor\n")
+        print("2. Agregar paciente\n")
+        print("3. Agregar paciente con medicina y vincular visita a un doctor existente\n")
+        print("4. Consultar doctores por especialidad\n")
+        print("5. Ingresar amistad paciente-paciente\n")
+        print("6. Ingresar amistad doctor-doctor\n")
         print("7. Salir\n")
         elec=input("")
-        elec = int(elec)
-        if (elec==1):
-            nombre=input("Nombre del doctor\n")
-            colegiado=input("Colegiado del doctor\n")
-            especialidad=input("Especialidad del doctor\n")
-            numero=input("Numero del doctor\n")
-            session.write_transaction(add_doc, nombre, colegiado, especialidad, numero)
-        elif (elec==2):
-            nombre=input("Nombre del paciente\n")
-            numero=input("Numero del paciente\n")
-            session.write_transaction(add_pac, nombre, numero)
-        elif (elec==3):
-            nombre=input ("Nombre paciente")
-            telefono=input ("Telefono\n")
-            nombred=input ("Nombre de medicina\n")
-            desdeFecha=input ("Desde que fecha\n")
-            hastaFecha=input ("Hasta que fecha\n")
-            dosis=input ("Dosis\n")
-            nombreDoc=input ("Nombre del doctor\n")
-            fechaVisit=input ("Fecha de visita\n")
-            session.write_transaction(mergeVisit, nombre, telefono, nombred, desdeFecha, hastaFecha, dosis, nombreDoc, fechaVisit)
-        elif (elec==4):
-            espec=input ("Nombre de especialidad")
-            session.read_transaction(return_docs, espec)
-        elif (elec==5):
-            nombre=input("Tu nombre\n")
-            nombre2=input("nombre de conocido\n")
-            session.write_transaction(knows_pacient, nombre, nombre2)
-        elif (elec==6):
-            nombre=input("Nombre doctor\n")
-            nombre2=input("Nombre de conocido\n")
-            session.write_transaction(knows_doctor, nombre, nombre2)
-        elif(elec==8):
-            nombreDoc = input("Ingrese nombre del doctor\n")
-            comp = session.write_transaction(ver_doc, nombreDoc)
-            print(comp)
+        if ((validarNumero(elec)==False)or (int(elec)==0)or (int(elec)>7)):
+            print("¡¡¡¡¡Ingresaste una opcion incorrecta!!!!\n")
+        else:
+            elec = int(elec)
+            if (elec==1):
+                print("\n-_-_-_-_-_-_Agregar nuevo doctor-_-_-_-_-_-_\n")
+                nombre=input("Nombre del doctor: ")
+                colegiado=input("Colegiado del doctor: ")
+                especialidad=input("Especialidad del doctor: ")
+                numero=input("Numero del doctor: ")
+                session.write_transaction(add_doc, nombre, colegiado, especialidad, numero)
+                print("\n>>> Doctor exitosamente agregado")
+            elif (elec==2):
+                print("\n-_-_-_-_-_-_Agregar nuevo paciente-_-_-_-_-_-_\n")
+                nombre=input("Nombre del paciente: ")
+                numero=input("Numero del paciente: ")
+                session.write_transaction(add_pac, nombre, numero)
+                print("\n>>> Paciente exitosamente agregado")
+            elif (elec==3):
+                print("\n-_-_-_-_-_-_Agregar paciente con medicina y vincular visita a un doctor existente-_-_-_-_-_-_\n")
+                nombre=input ("Nombre paciente: ")
+                telefono=input ("Telefono: ")
+                nombred=input ("Nombre de medicina: ")
+                desdeFecha=input ("Desde que fecha: ")
+                hastaFecha=input ("Hasta que fecha: ")
+                dosis=input ("Dosis: ")
+                nombreDoc=input ("Nombre del doctor: ")
+                fechaVisit=input ("Fecha de visita: ")
+                if((len(verificarDoc(nombreDoc))>=1)):
+                    session.write_transaction(mergeVisit, nombre, telefono, nombred, desdeFecha, hastaFecha, dosis, nombreDoc, fechaVisit)
+                    print("\n>>> Se ha creado exitosamente la visita de " + nombre + " a " + nombreDoc)
+                else:
+                    print("El doctor no existe en la DB")
+            elif (elec==4):
+                print("\n-_-_-_-_-_-_Conocer doctores especializados-_-_-_-_-_-_\n")
+                espec=input ("Nombre de especialidad: ")
+                session.read_transaction(return_docs, espec)
+            elif (elec==5):
+                print("\n-_-_-_-_-_-_Ingresar amistad paciente-paciente-_-_-_-_-_-_\n")
+                nombre=input("Tu nombre: ")
+                nombre2=input("nombre de conocido: ")
+                #Se verifica que ambos pacientes existan
+                if((len(verificarPac(nombre))>=1)and(len(verificarPac(nombre2))>=1)):
+                    session.write_transaction(knows_pacient, nombre, nombre2)
+                    print("\n>>> Se ha creado exitosamente la conexion entre " + nombre + " y " + nombre2)
+                else:
+                    print("Alguno de los pacientes no existe en la DB")
+            elif (elec==6):
+                print("\n-_-_-_-_-_-_Ingresar amistad doctor-doctor-_-_-_-_-_-_\n")
+                nombre=input("Nombre doctor: ")
+                nombre2=input("Nombre de conocido: ")
+                #Se verifica que ambos doctores existan
+                if((len(verificarDoc(nombre))>=1)and(len(verificarDoc(nombre2))>=1)):
+                    session.write_transaction(knows_doctor, nombre, nombre2)
+                    print("\n>>> Se ha creado exitosamente la conexion entre " + nombre + " y " + nombre2)
+                else:
+                    print("\n>>> Alguno de los doctores no existe en la DB")       
+    #Termina el while        
     if(elec==7):
         print("Hasta luego!")
-       # elif (elec=="5"):
-        #    nombre=input ("Nombre paciente")
-         #   telefono=input ("Telefono\n")
-          #  nombred=input ("Nombre de medicina\n")
-           # desdeFecha=input ("Desde que fecha\n")
-            #hastaFecha=input ("Hasta que fecha\n")
-            #dosis=input ("Dosis\n")
-            #session.write_transaction(mergePacDoc, nombre, telefono, nombred, desdeFecha, hastaFecha, dosis)
-       # elif (elec=="6"):
-      #      nombre=input ("Nombre paciente")
-        #    telefono=input ("Telefono\n")
-         #   nombred=input ("Nombre de medicina\n")
-          #  desdeFecha=input ("Desde que fecha\n")
-          #  hastaFecha=input ("Hasta que fecha\n")
-           # dosis=input ("Dosis\n")
-            #nombreDoc=input ("Nombre del doctor\n")
-            #fechaVisit=input ("Fecha de visita\n")
-            #session.write_transaction(mergeVisit, nombre, telefono, nombred, desdeFecha, hastaFecha, dosis, nombreDoc, fechaVisit)
-            
-    
+          
 
 
