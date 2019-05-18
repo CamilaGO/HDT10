@@ -38,11 +38,31 @@ def conocePac(nombre, especialidad):
         for node in nodes:
             lista.append(node)
         return lista
+#------------------------------------
+def conocePacdePac(nombre, especialidad):
+    lista=[]
+    cql = "MATCH (p:Paciente {nombre: '" + nombre + "'})-[:KNOWS]->(:Paciente)-[:KNOWS]->(:Paciente)-[:VISITS]->(d:Doctor {especialidad: '" + especialidad + "'}) RETURN d.nombre"
+            # Execute the CQL query
+    with driver.session() as graphDB_Session:
+        nodes = graphDB_Session.run(cql)
+        for node in nodes:
+            lista.append(node)
+        return lista
 
 #Agrega a la lista cada doctor especializado conocido por el doctor
 def conoceDocDoc(nombre, especialidad):
     lista=[]
     cql = "MATCH (d:Doctor {nombre: '" + nombre + "'})-[:KNOWS]->(x:Doctor {especialidad: '" + especialidad + "'}) RETURN x.nombre"
+            # Execute the CQL query
+    with driver.session() as graphDB_Session:
+        nodes = graphDB_Session.run(cql)
+        for node in nodes:
+            lista.append(node)
+        return lista
+#Agrega a la lista cada doctor especializado conocido por el doctor conocido por doctor (CONEXION EN SEGUNDO GRADO)
+def conoceDocdeDocdeDoc(nombre, especialidad):
+    lista=[]
+    cql = "MATCH (d:Doctor {nombre: '" + nombre + "'})-[:KNOWS]->(:Doctor)-[:KNOWS]->(x:Doctor {especialidad: '" + especialidad + "'}) RETURN x.nombre"
             # Execute the CQL query
     with driver.session() as graphDB_Session:
         nodes = graphDB_Session.run(cql)
@@ -116,13 +136,31 @@ def encontrarDOC(tx, nombre, especialidad):
            nombre=nombre, especialidad=especialidad):
             cont = cont + 1
             print (str(cont) + ". " + doc["d.nombre"])
-
+            
+def encontrarDocdePacDePac(tx, nombre, especialidad):
+    print("Doctores especializados en " + especialidad + "\n")
+    cont = 0
+    for doc in tx.run("MATCH (p:Paciente {nombre:$nombre})-[:KNOWS]->(:Paciente)-[:KNOWS]->(:Paciente)-[:VISITS]->(d:Doctor {especialidad:$especialidad}) RETURN d.nombre",
+           nombre=nombre, especialidad=especialidad):
+            cont = cont + 1
+            print (str(cont) + ". " + doc["d.nombre"])
+    
 # Segunda recomendacion
 # Recomienda un doctor de una especialidad especifica a otro doctor. Ingresa el nombre del doctor y la especialidad que busca.
 def FindDocWithDoc(tx, nombre, especialidad):
     print("Doctores especializados en " + especialidad + "\n")
     cont = 0
     for doc in tx.run("MATCH (d:Doctor {nombre:$nombre})-[:KNOWS]->(x:Doctor {especialidad:$especialidad}) RETURN x.nombre",
+           nombre=nombre, especialidad=especialidad):
+            cont = cont + 1
+            print (str(cont) + ". " + doc["x.nombre"])
+
+# Segunda recomendacion
+# Recomienda un doctor de una especialidad especifica a otro doctor. Ingresa el nombre del doctor y la especialidad que busca.
+def FindDocWithDocofDoc(tx, nombre, especialidad):
+    print("Doctores especializados en " + especialidad + "\n")
+    cont = 0
+    for doc in tx.run("MATCH (d:Doctor {nombre:$nombre})-[:KNOWS]->(:Doctor)-[:KNOWS]->(x:Doctor {especialidad:$especialidad}) RETURN x.nombre",
            nombre=nombre, especialidad=especialidad):
             cont = cont + 1
             print (str(cont) + ". " + doc["x.nombre"])
@@ -223,8 +261,16 @@ with driver.session() as session:
                         session.read_transaction(encontrarDOC, nombre, espec)
                     else:
                         print("Tus conocidos no conocen a nadie especializado en " + espec)
+                    print("\n-_-_-_-_-_Doctor visitado por paciente conocido del paciente conocido-_-_-_-_-_\n")
+                    if(len(conocePacdePac(nombre, espec))>=1):
+                        session.read_transaction(encontrarDocdePacDePac, nombre, espec)
+                    else:
+                        print("Tus conocidos no conocen a nadie especializado en " + espec+" en segundo grado")
                 else:
                     print("\n>>> El paciente llamado " + nombre + " no existe en la DB")
+                    
+                #print("\n-_-_-_-_-_Doctor visitado por paciente conocido del paciente conocido-_-_-_-_-_\n")
+                #session.read_transaction(encontrarDocdePacDePac, nombre, espec)
             # Doctor con especialidad conocido por otro.
             elif (elec==8):
                 print("\n-_-_-_-_-_-_Doctor especializado conocido por doctor-_-_-_-_-_-_\n")
@@ -236,8 +282,17 @@ with driver.session() as session:
                         session.read_transaction(FindDocWithDoc, nombre, espec)
                     else:
                         print("No conoces a nadie especializado en " + espec)
+                    print("\n-_-_-_-_-_Doctor especializado conocido por doctor conocido por doctor-_-_-_-_-_\n")
+                    if(len(conoceDocdeDocdeDoc(nombre, espec))>=1):
+                        session.read_transaction(FindDocWithDocofDoc, nombre, espec)
+                    else:
+                        print("No conoces a nadie especializado en " + espec+" en segundo grado")
+                    
                 else:
                     print("\n>>> El doctor llamado " + nombre + " no existe en la DB")
+                #print("\n-_-_-_-_-_Doctor especializado conocido por doctor conocido por doctor-_-_-_-_-_\n")
+                
+                #session.read_transaction(FindDocWithDocofDoc, nombre, espec)
     #Termina el while        
     if(elec==9):
         print("Hasta luego!")
